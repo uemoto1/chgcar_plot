@@ -16,8 +16,7 @@ def read_chgcar(chgcar):
     flag_data = False
     flag_skip = False
     data = []
-    temp = []
-    for (i, buff) in enumerate(chgcar):
+    for i, buff in enumerate(chgcar):
         line = buff.strip()
         if flag_skip:
             print line
@@ -26,7 +25,6 @@ def read_chgcar(chgcar):
         elif flag_data:
             token = line.split()
             temp += map(float, token)
-            print len(temp), nx, ny, nz, nsize
             if nsize <= len(temp):
                 flag_skip = True
                 data.append(temp)
@@ -38,16 +36,24 @@ def read_chgcar(chgcar):
             ny = int(token[1])
             nz = int(token[2])
             nsize = nx*ny*nz
+            temp = []
             flag_data = True
         elif len(line) == 0:
             flag_keyword = True
-    return data
-
+        elif i == 2:
+            vec_a = map(float, line.split())
+        elif i == 3:
+            vec_b = map(float, line.split())
+        elif i == 4:
+            vec_c = map(float, line.split())
+    lattice = [vec_a, vec_b, vec_c]
+    size = [nx, ny, nz]
+    return [lattice, size, data]
 
 
 def main()
     parser = OptionParser()
-    parser.add_option("-i", "--input", dest="input", type="string", default=None, help="CHGCAR file")
+    parser.add_option("-i", "--input", dest="input", type="string", default="CHGCAR", help="CHGCAR file")
     opts, args = parser.parse_args()
     print opts, args
 
