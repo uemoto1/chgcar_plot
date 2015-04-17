@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+
+import os.path
 from optparse import OptionParser
 from numpy import array
 
@@ -19,7 +21,6 @@ def read_chgcar(chgcar):
     for i, buff in enumerate(chgcar):
         line = buff.strip()
         if flag_skip:
-            print line
             if keyword in line:
                 flag_skip = False
         elif flag_data:
@@ -51,12 +52,24 @@ def read_chgcar(chgcar):
     return [lattice, size, data]
 
 
-def main()
+
+
+
+def main():
     parser = OptionParser()
     parser.add_option("-i", "--input", dest="input", type="string", default="CHGCAR", help="CHGCAR file")
     opts, args = parser.parse_args()
-    print opts, args
-
+    if os.path.isfile(opts.input):
+        with open(opts.input) as fh:
+            [lattice, size, data] = read_chgcar(fh)
+            a = array(lattice[0])
+	    b = array(lattice[1])
+	    c = array(lattice[2])
+	    nx, ny, nz = size
+	    rho = []
+	    for item in data:
+                rho = array(item)
+		rho.resize([nz, ny, nx])
 
 
 
