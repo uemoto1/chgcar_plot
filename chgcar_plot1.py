@@ -1,75 +1,75 @@
 #!/usr/bin/env python
-
-import os.path
-from optparse import OptionParser
-from numpy import array
-
-
-
-
 __author__ = 'uemoto'
 
+class Chgcar:
+
+    def __init__(self, chgcar_file):
+        skip_keyword = "augmentation occupancies"
+        # Read numerical data from CHGCAR format
+        self.rho = []
+        self.atom = []
+        flag = 0 # 0:header, 1:position, 2:keyword, 3:charge, 4:skip
+        for i, buff in enumerate(chgcar_file):
+            line = buff.strip()
+            if i == 0:
+                self.title = line
+            elif i == 1:
+                self.scale = float(line)
+            elif i == 2:
+                self.a = map(float, line.split())
+            elif i == 3:
+                self.b = map(float, line.split())
+            elif i == 4:
+                self.c = map(float, line.split())
+            elif i == 5:
+                self.elem = line.split()
+            elif i == 6:
+                self.nelem = map(int, line.split())
+            elif i == 7:
+                self.mode = line
+                flag = 1 # Reading Atom positon
+            elif 8 <= i:
+                if flag == 1:
+                    if 0 < len(line):
+                        pos = map(float, line.split())
+                        self.atom.append(pos)
+                    else:
+                        temp = [] # Initialize buffer
+                        flag = 2
+                elif flag == 2:
+                    start_keyword = line
+                    size = map(int, line.split())
+                    self.nx = size[0]
+                    self.ny = size[1]
+                    self.nz = size[2]
+                    flag = 3
+                elif flag == 3:
+                    if skip_keyword in line:
+                        self.rho.append(temp)
+                        temp = []
+                        flag = 4
+                    else:
+                        temp += map(float, line.split())
+                elif flag == 4:
+                    if start_keyword in line:
+                        flag = 3
+        # Lattice parameters
+        ab = [
+            self.a[1]*self.b[2]-self.a[2]*self.b[1],
+            self.a[2]*self.b[0]-self.a[0]*self.b[2],
+            self.a[0]*self.b[1]-self.a[1]*self.b[0]
+        ]
+        abc = ab[0]*self.c[0]+ab[1]*self.c[1]+ab[2]*self.c[2]
+        self.volume = abc
 
 
-
-
-def read_chgcar(chgcar):
-    flag_keyword = False
-    flag_data = False
-    flag_skip = False
-    data = []
-    for i, buff in enumerate(chgcar):
-        line = buff.strip()
-        if flag_skip:
-            if keyword in line:
-                flag_skip = False
-        elif flag_data:
-            token = line.split()
-            temp += map(float, token)
-            if nsize <= len(temp):
-                flag_skip = True
-                data.append(temp)
-                temp = []
-        elif flag_keyword:
-            keyword = line
-            token = keyword.split()
-            nx = int(token[0])
-            ny = int(token[1])
-            nz = int(token[2])
-            nsize = nx*ny*nz
-            temp = []
-            flag_data = True
-        elif len(line) == 0:
-            flag_keyword = True
-        elif i == 2:
-            vec_a = map(float, line.split())
-        elif i == 3:
-            vec_b = map(float, line.split())
-        elif i == 4:
-            vec_c = map(float, line.split())
-    lattice = [vec_a, vec_b, vec_c]
-    size = [nx, ny, nz]
-    return [lattice, size, data]
-
-
-
+    def get_value(s, i, j, k):
+        
 
 
 def main():
-    parser = OptionParser()
-    parser.add_option("-i", "--input", dest="input", type="string", default="CHGCAR", help="CHGCAR file")
-    opts, args = parser.parse_args()
-    if os.path.isfile(opts.input):
-        with open(opts.input) as fh:
-            [lattice, size, data] = read_chgcar(fh)
-            a = array(lattice[0])
-	    b = array(lattice[1])
-	    c = array(lattice[2])
-	    nx, ny, nz = size
-	    rho = []
-	    for item in data:
-                rho = array(item)
-		rho.resize([nz, ny, nx])
+    with open("CHGCAR") as fh:
+        chgcar = Chgcar(fh)
 
 
 
