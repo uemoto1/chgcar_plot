@@ -1,8 +1,12 @@
 #!/usr/bin/env python
+import math
+import sys
+
 __author__ = 'uemoto'
 
-class Chgcar:
 
+class Chgcar:
+    # Class for the data-storage of CHGCAR
     def __init__(self, chgcar_file):
         skip_keyword = "augmentation occupancies"
         # Read numerical data from CHGCAR format
@@ -63,15 +67,54 @@ class Chgcar:
         self.volume = abc
 
 
-    def get_value(s, i, j, k):
-        
+    def get_data(self, s, ix, iy, iz):
+        ix = ix % self.nx
+        iy = iy % self.ny
+        iz = iz % self.nz
+        return self.rho[s][ix + self.nx * (iy + self.ny * iz)]
+
+
+    def density(self, s, a, b, c):
+        x = a * self.nx
+        y = b * self.ny
+        z = c * self.nz
+        ix = int(math.floor(x))
+        iy = int(math.floor(y))
+        iz = int(math.floor(z))
+        dx = x - ix
+        dy = y - iy
+        dz = z - iz
+        Dx = 1.0 - dx
+        Dy = 1.0 - dy
+        Dz = 1.0 - dz
+        if (0 <= dx <= 1) and (0 <= dy <= 1) and (0 <= dz <= 1):
+            pass
+        else:
+            print dx, dy, dz
+            sys.exit(0)
+        r000 = self.get_data(s, ix, iy, iz)
+        r001 = self.get_data(s, ix, iy, iz+1)
+        r010 = self.get_data(s, ix, iy+1, iz)
+        r011 = self.get_data(s, ix, iy+1, iz+1)
+        r100 = self.get_data(s, ix+1, iy, iz)
+        r101 = self.get_data(s, ix+1, iy, iz+1)
+        r110 = self.get_data(s, ix+1, iy+1, iz)
+        r111 = self.get_data(s, ix+1, iy+1, iz+1)
+        return (r000*Dx*Dy*Dz + r001*Dx*Dy*dz + r010*Dx*dy*Dz + r011*Dx*dy*dz
+            + r100*dx*Dy*Dz + r101*dx*Dy*dz + r110*dx*dy*Dz + r111*dx*dy*dz)
 
 
 def main():
     with open("CHGCAR") as fh:
         chgcar = Chgcar(fh)
-
-
+        for i in xrange(300):
+            for j in xrange(300):
+                x = i*0.01
+                y = j*0.01
+                z = 0.5
+                print "%f %f %e" % (x, y, chgcar.density(0, x, y, z))
+        for (x, y, z) in chgcar.atom:
+            print "# %f %f %f" % (x, y, z)
 
 if __name__ == "__main__":
     main()
