@@ -4,6 +4,40 @@ import sys
 
 __author__ = 'uemoto'
 
+def dot(p, q):
+    return p[0]*q[0]+p[1]*q[1]+p[2]+q[2]
+
+def cross(p, q):
+    return [p[1]*q[2]-p[2]*q[1],
+            p[2]*q[0]-p[0]*q[2],
+            p[0]*q[1]-p[1]*q[0]]
+
+def det(A):
+    return (+A[0][0]*A[1][1]*A[2][2]
+            -A[0][0]*A[1][2]*A[2][1]
+            +A[0][1]*A[1][2]*A[2][0]
+            -A[0][1]*A[1][0]*A[2][2]
+            +A[0][2]*A[1][0]*A[2][1]
+            -A[0][2]*A[1][1]*A[2][0])
+
+def inv(A):
+    inv_d = 1.0 / det(A)
+    i00 = +(A[1][1]*A[2][2]-A[1][2]*A[2][1])*inv_d
+    i10 = -(A[1][0]*A[2][2]-A[1][2]*A[2][0])*inv_d
+    i20 = +(A[1][0]*A[2][1]-A[1][1]*A[2][0])*inv_d
+    i01 = -(A[0][1]*A[2][2]-A[0][2]*A[2][1])*inv_d
+    i11 = +(A[0][0]*A[2][2]-A[0][2]*A[2][0])*inv_d
+    i21 = -(A[0][0]*A[2][1]-A[0][1]*A[2][0])*inv_d
+    i02 = +(A[0][1]*A[1][2]-A[0][2]*A[1][1])*inv_d
+    i12 = -(A[0][0]*A[1][2]-A[0][2]*A[1][0])*inv_d
+    i22 = +(A[0][0]*A[1][1]-A[0][1]*A[1][0])*inv_d
+    return [[i00, i01, i02], [i10, i11, i12], [i20, i21, i22]]
+
+def prod(A, p):
+    ap0 = dot(A[0], p)
+    ap1 = dot(A[1], p)
+    ap2 = dot(A[2], p)
+    return [ap0, ap1, ap2]
 
 class Chgcar:
     # Class for the data-storage of CHGCAR
@@ -58,14 +92,16 @@ class Chgcar:
                     if start_keyword in line:
                         flag = 3
         # Lattice parameters
-        ab = [
-            self.a[1]*self.b[2]-self.a[2]*self.b[1],
-            self.a[2]*self.b[0]-self.a[0]*self.b[2],
-            self.a[0]*self.b[1]-self.a[1]*self.b[0]
-        ]
-        abc = ab[0]*self.c[0]+ab[1]*self.c[1]+ab[2]*self.c[2]
-        self.volume = abc
-
+        self.volume = dot(self.a, cross(self.b, self.c))
+        # Scalar parameters
+        aa = dot(self.a, self.a)
+        ab = dot(self.a, self.b)
+        ac = dot(self.a, self.c)
+        bb = dot(self.b, self.b)
+        bc = dot(self.b, self.c)
+        cc = dot(self.c, self.c)
+        self.matrix = [[aa, ab, ac], [ab, bb, bc], [ac, bc, cc]]
+        self.imatrix = inv(self.matrix)
 
     def get_data(self, s, ix, iy, iz):
         ix = ix % self.nx
@@ -84,21 +120,23 @@ class Chgcar:
         dx = x - ix
         dy = y - iy
         dz = z - iz
-        Dx = 1.0 - dx
-        Dy = 1.0 - dy
-        Dz = 1.0 - dz
-        r000 = self.get_data(s, ix, iy, iz)
-        r001 = self.get_data(s, ix, iy, iz+1)
-        r010 = self.get_data(s, ix, iy+1, iz)
-        r011 = self.get_data(s, ix, iy+1, iz+1)
-        r100 = self.get_data(s, ix+1, iy, iz)
-        r101 = self.get_data(s, ix+1, iy, iz+1)
-        r110 = self.get_data(s, ix+1, iy+1, iz)
-        r111 = self.get_data(s, ix+1, iy+1, iz+1)
-        return (r000*Dx*Dy*Dz + r001*Dx*Dy*dz + r010*Dx*dy*Dz + r011*Dx*dy*dz
-            + r100*dx*Dy*Dz + r101*dx*Dy*dz + r110*dx*dy*Dz + r111*dx*dy*dz)
+        r = 0.0
+        for (jx, px) in enumerate([1.0-dx, dx]):
+            for (jy, py) in enumerate([1.0-dy, dy]):
+                for (jz, pz) in enumerate([1.0-dz, dz]):
+                    w = px*py*pz
+                    f = get_data(s, ix+jx, iy+jy, iz+jz)
+                    r+= w*f
+        return result
 
 
+    def get_position(self, x, y, z):
+        r = [x, y, z]
+        ar = dot(self.a, r)
+        br = dot(self.b, r)
+        cr = dot(self.c, r)
+        return prod(self.imatrix, [ar, br, cr])
+    s
 
 
 # Standard colorbar
@@ -132,6 +170,9 @@ def colorbar(c):
             g = 0
             b = 0
     return (r, g, b)
+
+
+
 
 
 
