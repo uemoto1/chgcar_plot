@@ -87,11 +87,6 @@ class Chgcar:
         Dx = 1.0 - dx
         Dy = 1.0 - dy
         Dz = 1.0 - dz
-        if (0 <= dx <= 1) and (0 <= dy <= 1) and (0 <= dz <= 1):
-            pass
-        else:
-            print dx, dy, dz
-            sys.exit(0)
         r000 = self.get_data(s, ix, iy, iz)
         r001 = self.get_data(s, ix, iy, iz+1)
         r010 = self.get_data(s, ix, iy+1, iz)
@@ -104,17 +99,72 @@ class Chgcar:
             + r100*dx*Dy*Dz + r101*dx*Dy*dz + r110*dx*dy*Dz + r111*dx*dy*dz)
 
 
+
+
+# Standard colorbar
+def colorbar(c):
+    if c < 0.0:
+            r = 0
+            g = 0
+            b = 0.5
+    elif c < 0.125:
+            r = 0
+            g = 0
+            b = 0.5 + (c - 0.0) * 4.0
+    elif c < 0.375:
+            r = 0.0
+            g = (c - 0.125) * 4.0
+            b = 1.0
+    elif c < 0.625:
+            r = (c - 0.375) * 4.0
+            g = 1.0
+            b = 1.0 - (c - 0.375) * 4.0
+    elif c < 0.875:
+            r = 1.0
+            g = 1.0 - (c - 0.625) * 4.0
+            b = 0.0
+    elif c < 1.0:
+            r = 1.0 - (c - 0.875) * 4.0
+            g = 0
+            b = 0
+    else:
+            r = 1.0
+            g = 0
+            b = 0
+    return (r, g, b)
+
+
+
 def main():
     with open("CHGCAR") as fh:
         chgcar = Chgcar(fh)
-        for i in xrange(300):
-            for j in xrange(300):
-                x = i*0.01
-                y = j*0.01
-                z = 0.5
-                print "%f %f %e" % (x, y, chgcar.density(0, x, y, z))
-        for (x, y, z) in chgcar.atom:
-            print "# %f %f %f" % (x, y, z)
-
+        sq1 = 0.0
+        sq2 = 0.0
+        num = 0
+        with open("output.pam", "wb") as img:
+            img.write("P7\n")
+            img.write("WIDTH 300\n")
+            img.write("HEIGHT 300\n")
+            img.write("DEPTH 4\n")
+            img.write("MAXVAL 255\n")
+            img.write("TUPLTYPE RGB_ALPHA\n")
+            img.write("ENDHDR\n")
+            for i in xrange(300):
+                for j in xrange(300):
+                    x = i*0.01
+                    y = j*0.01
+                    z = 0.5
+                    q = (chgcar.density(0, x, y, z))
+                    sq1 += q
+                    sq2 += q*q
+                    num += 1
+                    (r, g, b) = colorbar(q/10)
+                    img.write(chr(int(r*255)))
+                    img.write(chr(int(g*255)))
+                    img.write(chr(int(b*255)))
+                    img.write(chr(255))
+            print "# Total %d, Average %e, Sigma %e" % (
+                num, sq1 / num, math.sqrt((sq1*sq1-sq2))/num
+            )
 if __name__ == "__main__":
     main()
