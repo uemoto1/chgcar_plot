@@ -1,63 +1,79 @@
 #!/usr/bin/env python
+import optparse
 import math
 import sys
+import os
 
 __author__ = 'uemoto'
 
 # Dot product of 3-dimensional vectors
+
+
 def dot(p, q):
-    return p[0]*q[0]+p[1]*q[1]+p[2]*q[2]
+    return p[0] * q[0] + p[1] * q[1] + p[2] * q[2]
 
 # Cross product of 3-dimensional vectors
+
+
 def cross(p, q):
-    return [p[1]*q[2]-p[2]*q[1],
-            p[2]*q[0]-p[0]*q[2],
-            p[0]*q[1]-p[1]*q[0]]
+    return [p[1] * q[2] - p[2] * q[1],
+            p[2] * q[0] - p[0] * q[2],
+            p[0] * q[1] - p[1] * q[0]]
 
 # Normalize
+
+
 def normal(p):
     ip = 1.0 / math.sqrt(dot(p, p))
-    return [p[0]*ip, p[1]*ip, p[2]*ip]
+    return [p[0] * ip, p[1] * ip, p[2] * ip]
 
 # Determinant of 3x3 matrix
+
+
 def det(A):
-    return (+A[0][0]*A[1][1]*A[2][2]
-            -A[0][0]*A[1][2]*A[2][1]
-            +A[0][1]*A[1][2]*A[2][0]
-            -A[0][1]*A[1][0]*A[2][2]
-            +A[0][2]*A[1][0]*A[2][1]
-            -A[0][2]*A[1][1]*A[2][0])
+    return (+A[0][0] * A[1][1] * A[2][2]
+            - A[0][0] * A[1][2] * A[2][1]
+            + A[0][1] * A[1][2] * A[2][0]
+            - A[0][1] * A[1][0] * A[2][2]
+            + A[0][2] * A[1][0] * A[2][1]
+            - A[0][2] * A[1][1] * A[2][0])
 
 # Inverse matric of A
+
+
 def inv(A):
     inv_det = 1.0 / det(A)
-    i00 = +(A[1][1]*A[2][2]-A[1][2]*A[2][1])*inv_det
-    i01 = -(A[0][1]*A[2][2]-A[0][2]*A[2][1])*inv_det
-    i02 = +(A[0][1]*A[1][2]-A[0][2]*A[1][1])*inv_det
-    i10 = -(A[1][0]*A[2][2]-A[1][2]*A[2][0])*inv_det
-    i11 = +(A[0][0]*A[2][2]-A[0][2]*A[2][0])*inv_det
-    i12 = -(A[0][0]*A[1][2]-A[0][2]*A[1][0])*inv_det
-    i20 = +(A[1][0]*A[2][1]-A[1][1]*A[2][0])*inv_det
-    i21 = -(A[0][0]*A[2][1]-A[0][1]*A[2][0])*inv_det
-    i22 = +(A[0][0]*A[1][1]-A[0][1]*A[1][0])*inv_det
+    i00 = +(A[1][1] * A[2][2] - A[1][2] * A[2][1]) * inv_det
+    i01 = -(A[0][1] * A[2][2] - A[0][2] * A[2][1]) * inv_det
+    i02 = +(A[0][1] * A[1][2] - A[0][2] * A[1][1]) * inv_det
+    i10 = -(A[1][0] * A[2][2] - A[1][2] * A[2][0]) * inv_det
+    i11 = +(A[0][0] * A[2][2] - A[0][2] * A[2][0]) * inv_det
+    i12 = -(A[0][0] * A[1][2] - A[0][2] * A[1][0]) * inv_det
+    i20 = +(A[1][0] * A[2][1] - A[1][1] * A[2][0]) * inv_det
+    i21 = -(A[0][0] * A[2][1] - A[0][1] * A[2][0]) * inv_det
+    i22 = +(A[0][0] * A[1][1] - A[0][1] * A[1][0]) * inv_det
     return [[i00, i01, i02], [i10, i11, i12], [i20, i21, i22]]
 
 # Matrix-vector production
+
+
 def prod(A, p):
     ap0 = dot(A[0], p)
     ap1 = dot(A[1], p)
     ap2 = dot(A[2], p)
     return [ap0, ap1, ap2]
 
-
 # Class for the data-storage of CHGCAR
+
+
 class Chgcar:
+
     def __init__(self, chgcar_file):
         skip_keyword = "augmentation occupancies"
         # Read numerical data from CHGCAR format
         self.rho = []
         self.atom = []
-        flag = 0 # 0:header, 1:position, 2:keyword, 3:charge, 4:skip
+        flag = 0  # 0:header, 1:position, 2:keyword, 3:charge, 4:skip
         for i, buff in enumerate(chgcar_file):
             line = buff.strip()
             if i == 0:
@@ -76,14 +92,14 @@ class Chgcar:
                 self.nelem = map(int, line.split())
             elif i == 7:
                 self.mode = line
-                flag = 1 # Reading Atom positon
+                flag = 1  # Reading Atom positon
             elif 8 <= i:
                 if flag == 1:
                     if 0 < len(line):
                         pos = map(float, line.split())
                         self.atom.append(pos)
                     else:
-                        temp = [] # Initialize buffer
+                        temp = []  # Initialize buffer
                         flag = 2
                 elif flag == 2:
                     start_keyword = line
@@ -137,16 +153,29 @@ class Chgcar:
         dz = z - iz
         r = 0.0
         # Cubic-linear interpolation
-        for (jx, px) in enumerate([1.0-dx, dx]):
-            for (jy, py) in enumerate([1.0-dy, dy]):
-                for (jz, pz) in enumerate([1.0-dz, dz]):
-                    w = px*py*pz
-                    f = self.get_data(s, ix+jx, iy+jy, iz+jz)
-                    r+= w*f
+        for (jx, px) in enumerate([1.0 - dx, dx]):
+            for (jy, py) in enumerate([1.0 - dy, dy]):
+                for (jz, pz) in enumerate([1.0 - dz, dz]):
+                    w = px * py * pz
+                    f = self.get_data(s, ix + jx, iy + jy, iz + jz)
+                    r += w * f
         return r
 
 
-
+def colorbar_mono(c):
+    if c < 0.0:
+        r = 0.25
+        g = 0.25
+        b = 0.25
+    elif c < 1.00:
+        r = 0.25 + c * 0.50
+        g = 0.25 + c * 0.50
+        b = 0.25 + c * 0.50
+    else:
+        r = 0.75
+        g = 0.75
+        b = 0.75
+    return (r, g, b)
 
 
 def colorbar(c):
@@ -181,7 +210,7 @@ def colorbar(c):
     return (r, g, b)
 
 
-def plot(chg, r0, r1, r2, xr, yr, s=0.1):
+def plot(chg, r0, r1, r2, xr, yr, output="chgcar.pam", factor=0.0005, sample=0.1, mode=0, flag=False):
     [x0, y0, z0] = chg.abc2xyz(r0)
     d1 = chg.abc2xyz(r1)
     d2 = chg.abc2xyz(r2)
@@ -190,10 +219,10 @@ def plot(chg, r0, r1, r2, xr, yr, s=0.1):
     v = normal(cross(w, u))
     x1, x2 = xr
     y1, y2 = yr
-    nu = int((x2-x1)/s)
-    nv = int((y2-y1)/s)
+    nu = int((x2 - x1) / sample)
+    nv = int((y2 - y1) / sample)
     print u, v, w
-    with open("output.pam", "wb") as out:
+    with open(output, "wb") as out:
         out.write("P7\n")
         out.write("WIDTH %d\n" % nu)
         out.write("HEIGHT %d\n" % nv)
@@ -202,17 +231,23 @@ def plot(chg, r0, r1, r2, xr, yr, s=0.1):
         out.write("TUPLTYPE RGB_ALPHA\n")
         out.write("ENDHDR\n")
         for j in xrange(nv):
+            vv = sample * j + y1
             for i in xrange(nu):
-                x = x0+u[0]*s*i+v[0]*s*i
-                y = y0+u[1]*s*i+v[1]*s*j
-                z = z0+u[2]*s*i+v[2]*s*j
+                uu = sample * i + x1
+                x = x0 + u[0] * uu + v[0] * vv
+                y = y0 + u[1] * uu + v[1] * vv
+                z = z0 + u[2] * uu + v[2] * vv
                 [a, b, c] = chg.xyz2abc([x, y, z])
-                if (0 <= a <= 1) and (0 <= b <= 1) and (0 <= c <= 1):
-                    q = chg.density(0, a, b, c)
-                    [r, g, b] = colorbar(q/1000)
-                    out.write(chr(int(255*r)))
-                    out.write(chr(int(255*g)))
-                    out.write(chr(int(255*b)))
+                if (0 <= a < 1) and (0 <= b < 1) and (0 <= c < 1) or flag:
+                    if mode == 0:
+                        q = factor * chg.density(0, a, b, c)
+                    else:
+                        q = factor * (chg.density(mode, a, b, c)) + 0.5
+                    # Plot the calculated results
+                    [r, g, b] = colorbar(q)
+                    out.write(chr(int(255 * r)))
+                    out.write(chr(int(255 * g)))
+                    out.write(chr(int(255 * b)))
                     out.write(chr(255))
                 else:
                     out.write(chr(0))
@@ -221,14 +256,46 @@ def plot(chg, r0, r1, r2, xr, yr, s=0.1):
                     out.write(chr(0))
 
 
-
-
 def main():
-    with open("CHGCAR") as fh:
+    parser = optparse.OptionParser()
+    parser.add_option("-i", "--input", dest="input", type=str,
+                      default="CHGCAR", help="input 'CHGCAR' file")
+    parser.add_option("-o", "--output", dest="output", type=str,
+                      default="chgcar.pam", help="output 'pam' image file")
+    parser.add_option("-c", "--center", dest="center", type=str,
+                      default="0,0,0", help="center position")
+    parser.add_option("-u", "--uvec", dest="uvec", type=str,
+                      default="0,1,0", help="vector of u-direction in figure")
+    parser.add_option("-v", "--vvec", dest="vvec", type=str,
+                      default="0,0,1", help="vector of v-direction in figure")
+    parser.add_option("-U", "--urange", dest="urange", type=str,
+                      default="-1:10", help="range of u in plot")
+    parser.add_option("-V", "--vrange", dest="vrange", type=str,
+                      default="-1:16", help="range of v in plot")
+    parser.add_option("-s", "--sample", dest="sample", type=float,
+                      default=0.05, help="range of v in plot")
+    parser.add_option("-m", "--mode", dest="mode", type=int,
+                      default=0, help="0:Charge density, 1,2,3: Spin density of x,y,z")
+    parser.add_option("-a", "--allarea", dest="allarea", action="store_true",
+                      default=False, help="plot all region")
+    (opts, args) = parser.parse_args()
+
+    if not os.path.isfile(opts.input):
+        sys.stderr.write("Error! '%s' is not found!\n" % (opts.input))
+        sys.exit(-1)
+
+    c0 = map(float, opts.center.split(","))
+    uv = map(float, opts.uvec.split(","))
+    vv = map(float, opts.vvec.split(","))
+    ur = map(float, opts.urange.split(":"))
+    vr = map(float, opts.vrange.split(":"))
+
+    with open(opts.input) as fh:
         chgcar = Chgcar(fh)
-        plot(chgcar, [0.5, -0.5, -0.5],
-            [0., 1., 0.], [0., 0., 1.],
-            20.00, 20.00, 0.02)
+        plot(
+            chgcar, c0, uv, vv, ur, vr, output=opts.output, factor=0.001, sample=opts.sample,
+            mode=opts.mode, flag=opts.allarea)
+
 
 if __name__ == "__main__":
     main()
